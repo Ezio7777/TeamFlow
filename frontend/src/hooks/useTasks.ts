@@ -32,15 +32,39 @@ export const useCreateTask = () => {
 
 export const useUpdateTask = () => {
   const qc = useQueryClient();
+  
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       tasksApi.update(id, data),
-    onSuccess: () => {
+    
+    onMutate: async ({ id, data }) => {
+      const previousTasks = qc.getQueriesData({ queryKey: ['tasks'] });
+      qc.setQueriesData({ queryKey: ['tasks'] }, (oldData: any) => {
+        if (!oldData?.tasks) return oldData;
+        return {
+          ...oldData,
+          tasks: oldData.tasks.map((task: any) =>
+            task._id === id ? { ...task, ...data } : task
+          ),
+        };
+      });
+
+      await qc.cancelQueries({ queryKey: ['tasks'] });
+
+      return { previousTasks };
+    },
+    
+    onError: (err: Error, variables, context) => {
+      if (context?.previousTasks) {
+        context.previousTasks.forEach(([queryKey, data]) => {
+          qc.setQueryData(queryKey, data);
+        });
+      }
+    },
+    
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['projects'] });
-    },
-    onError: (err: Error) => {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     },
   });
 };

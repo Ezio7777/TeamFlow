@@ -18,9 +18,10 @@ interface KanbanColumnProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   canModify: boolean;
+  canAdd: boolean;
 }
 
-export function KanbanColumn({ status, tasks, onAdd, onEdit, onDelete, canModify }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, onAdd, onEdit, onDelete, canModify, canAdd }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const config = columnConfig[status];
 
@@ -34,7 +35,7 @@ export function KanbanColumn({ status, tasks, onAdd, onEdit, onDelete, canModify
             {tasks.length}
           </span>
         </div>
-        {canModify && (
+        {canAdd && (
           <button
             onClick={() => onAdd(status)}
             className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"

@@ -32,8 +32,10 @@ export function TaskCard({ task, onEdit, onDelete, canModify }: TaskCardProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group bg-card rounded-lg border border-border p-3 space-y-2.5 transition-all duration-150',
-        isDragging ? 'opacity-50 shadow-xl scale-105 rotate-1' : 'hover:border-primary/30 hover:shadow-sm'
+        'group rounded-lg p-3 space-y-2.5 transition-all duration-150',
+        isDragging 
+          ? 'opacity-30 bg-muted/50 border-2 border-dashed border-muted-foreground/30 shadow-none' 
+          : 'bg-card border border-border hover:border-primary/30 hover:shadow-sm'
       )}
     >
       <div className="flex items-start gap-2">

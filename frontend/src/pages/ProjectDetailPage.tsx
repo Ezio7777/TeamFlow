@@ -27,6 +27,7 @@ import { useSocket } from '@/contexts/SocketContext';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Task } from '@/types';
 import { useDebounce } from '@/hooks/useDebounce';
+import { toast } from '@/hooks/useToast';
 
 const STATUSES = ['todo', 'in-progress', 'done'] as const;
 
@@ -96,13 +97,21 @@ export default function ProjectDetailPage() {
       const task = allTasks.find((t) => t._id === taskId);
       if (!task || task.status === newStatus) return;
 
-      await updateTask.mutateAsync({ id: taskId, data: { status: newStatus } });
+      updateTask.mutate({ id: taskId, data: { status: newStatus } });
       socket?.emit('task:drag_update', { taskId, status: newStatus });
     },
     [allTasks, updateTask, socket]
   );
 
   const handleAddTask = (status: string) => {
+    if (!isManagerOrAbove) {
+      toast({
+        title: 'Access Denied',
+        description: 'Only Admins and Managers can create new tasks.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setDefaultStatus(status);
     setEditTask(null);
     setTaskFormOpen(true);
@@ -155,11 +164,11 @@ export default function ProjectDetailPage() {
             <p className="text-xs text-muted-foreground mt-0.5 truncate">{project.description}</p>
           )}
         </div>
-        {isManagerOrAbove && (
-          <Button size="sm" onClick={() => handleAddTask('todo')}>
-            <Plus className="h-4 w-4 mr-1.5" /> Add Task
-          </Button>
-        )}
+        
+        {/* Button is now visible to everyone! */}
+        <Button size="sm" onClick={() => handleAddTask('todo')}>
+          <Plus className="h-4 w-4 mr-1.5" /> Add Task
+        </Button>
       </div>
 
       {/* Filters */}
@@ -206,6 +215,7 @@ export default function ProjectDetailPage() {
                   onEdit={handleEditTask}
                   onDelete={(task) => setDeleteTarget(task)}
                   canModify={canModify}
+                  canAdd={isManagerOrAbove}
                 />
               ))}
             </div>
