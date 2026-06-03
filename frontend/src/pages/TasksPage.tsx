@@ -166,12 +166,20 @@ export default function TasksPage() {
                       <PriorityBadge priority={task.priority} />
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      {task.assignedTo ? (
+                      {/* SAFEGUARD: Check if it is a populated object first */}
+                      {task.assignedTo && typeof task.assignedTo === 'object' ? (
                         <div className="flex items-center gap-2">
                           <Avatar name={task.assignedTo.name} src={task.assignedTo.avatar} size="sm" />
                           <span className="text-xs">{task.assignedTo.name}</span>
                         </div>
+                      ) : task.assignedTo ? (
+                        // Temporary state while optimistic update fetches the real user object
+                        <div className="flex items-center gap-2 animate-pulse">
+                          <div className="h-7 w-7 rounded-full bg-muted" />
+                          <div className="h-3 w-16 bg-muted rounded" />
+                        </div>
                       ) : (
+                        // Unassigned state
                         <span className="text-xs text-muted-foreground/60">Unassigned</span>
                       )}
                     </td>

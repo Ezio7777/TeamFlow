@@ -83,25 +83,76 @@ export default function ProjectDetailPage() {
     setActiveTask(task || null);
   };
 
+  // 1. THIS MAKES THE COLUMN EXPAND WHILE DRAGGING
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const overId = over.id as string;
+
+    if (taskId === overId) return;
+
+    let newStatus = overId;
+    if (!STATUSES.includes(newStatus as (typeof STATUSES)[number])) {
+      const overTask = allTasks.find((t) => t._id === overId);
+      if (!overTask) return;
+      newStatus = overTask.status;
+    }
+
+    const currentTask = allTasks.find((t) => t._id === taskId);
+    if (!currentTask || currentTask.status === newStatus) return;
+    qc.setQueriesData({ queryKey: ['tasks'] }, (oldData: any) => {
+      if (!oldData?.tasks) return oldData;
+      return {
+        ...oldData,
+        tasks: oldData.tasks.map((t: any) =>
+          t._id === taskId ? { ...t, status: newStatus } : t
+        ),
+      };
+    });
+  }, [allTasks, qc]);
+
+  // 2. THIS SAVES TO THE DATABASE WHEN YOU LET GO
   const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
+    (event: DragEndEvent) => {
+      const originalTask = activeTask; 
       setActiveTask(null);
+
       const { active, over } = event;
-      if (!over) return;
+      if (!over || !originalTask) return;
 
       const taskId = active.id as string;
-      const newStatus = over.id as string;
+      const overId = over.id as string;
 
-      if (!STATUSES.includes(newStatus as (typeof STATUSES)[number])) return;
-
-      const task = allTasks.find((t) => t._id === taskId);
-      if (!task || task.status === newStatus) return;
-
+      let newStatus = overId;
+      if (!STATUSES.includes(newStatus as (typeof STATUSES)[number])) {
+        const overTask = allTasks.find((t) => t._id === overId);
+        if (!overTask) return;
+        newStatus = overTask.status;
+      }
+      if (originalTask.status === newStatus) return;
       updateTask.mutate({ id: taskId, data: { status: newStatus } });
       socket?.emit('task:drag_update', { taskId, status: newStatus });
     },
-    [allTasks, updateTask, socket]
+    [allTasks, updateTask, socket, activeTask]
   );
+
+  // 3. THIS SNAPS IT BACK IF YOU PRESS ESCAPE TO CANCEL
+  const handleDragCancel = useCallback(() => {
+    if (activeTask) {
+      qc.setQueriesData({ queryKey: ['tasks'] }, (oldData: any) => {
+        if (!oldData?.tasks) return oldData;
+        return {
+          ...oldData,
+          tasks: oldData.tasks.map((t: any) =>
+            t._id === activeTask._id ? { ...t, status: activeTask.status } : t
+          ),
+        };
+      });
+    }
+    setActiveTask(null);
+  }, [activeTask, qc]);
 
   const handleAddTask = (status: string) => {
     if (!isManagerOrAbove) {
@@ -203,7 +254,9 @@ export default function ProjectDetailPage() {
             sensors={sensors}
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}    
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel} 
           >
             <div className="flex gap-5">
               {STATUSES.map((status) => (
